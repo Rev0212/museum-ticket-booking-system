@@ -1,16 +1,15 @@
-# Dependencies
-node_modules/
-/node_modules
-/node_modules/*
+# Node modules
+node_modules
+/node_modules/**
+.cache
+/.cache/**
 
-# Production
+# Build files
 /build
-
-# Testing
-/coverage
+/dist
 
 # Environment files
-.env
+.env*
 .env.local
 .env.development.local
 .env.test.local
@@ -21,12 +20,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# IDE specific files
-.idea/
-.vscode/
+# IDE files
+.idea
+.vscode
 *.swp
 *.swo
 
-# OS generated files
+# OS files
 .DS_Store
 Thumbs.db
