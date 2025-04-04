@@ -1,46 +1,40 @@
 # Dependencies
 node_modules/
 **/node_modules/
+
+# Cache files
+.cache/
 **/.cache/
+**/default-development/
+**/default-development/*.pack
+
+# Build directories
+build/
+dist/
 **/build/
 **/dist/
 
-# Environment variables
+# Environment files
 .env
 .env.*
 **/.env
 **/.env.*
 
-# Build & cache
-build/
-dist/
-.cache/
-**/.cache/
-**/default-development/
-
-# Chrome drivers and large files
-**/chromium/
-**/.local-chromium/
-**/Chromium Framework.framework/
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE and editor files
+# IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Testing
 /coverage
 **/coverage/
-
-# Misc
-.DS_Store
-Thumbs.db
