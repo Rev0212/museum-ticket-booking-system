@@ -1,5 +1,7 @@
-#Dependencies
+# Dependencies
+node_modules/
 /node_modules
+/node_modules/*
 
 # Production
 /build
@@ -15,7 +17,7 @@
 .env.production.local
 
 # Debug logs
-npm-debug.log*xw
+npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
