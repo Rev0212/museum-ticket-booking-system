@@ -66,10 +66,11 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   const handleSendEmail = async () => {
     try {
       setSendingEmail(true);
-      await sendTicketEmailById(id);
+      await sendTicketEmailById(booking._id);
       setEmailSuccess(true);
     } catch (err) {
       setError('Failed to send ticket via email');
+      console.error('Error sending ticket via email:', err);
     } finally {
       setSendingEmail(false);
     }
@@ -78,10 +79,11 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   const handleSendWhatsApp = async () => {
     try {
       setSendingWhatsApp(true);
-      await sendTicketWhatsAppById(id);
+      await sendTicketWhatsAppById(booking._id);
       setWhatsAppSuccess(true);
     } catch (err) {
       setError('Failed to send ticket via WhatsApp');
+      console.error('Error sending ticket via WhatsApp:', err);
     } finally {
       setSendingWhatsApp(false);
     }
@@ -90,10 +92,11 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   const handleDownloadPDF = async () => {
     try {
       setDownloadingPDF(true);
-      await downloadTicketPDF(id);
+      await downloadTicketPDF(booking._id);
       setPdfSuccess(true);
     } catch (err) {
       setError('Failed to download ticket PDF');
+      console.error('Error downloading ticket PDF:', err);
     } finally {
       setDownloadingPDF(false);
     }
