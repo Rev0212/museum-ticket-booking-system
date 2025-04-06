@@ -75,6 +75,18 @@ const BookingForm = ({ bookingData, setBookingData, preselectedMuseum, loading: 
     setFormData({ ...formData, visitDate: date });
   };
 
+  const calculateTotal = () => {
+    const adultPrice = 50;
+    const childPrice = 0;
+    const seniorPrice = 20;
+
+    return (
+      (parseInt(formData.adultTickets || 0) * adultPrice) +
+      (parseInt(formData.childTickets || 0) * childPrice) +
+      (parseInt(formData.seniorTickets || 0) * seniorPrice)
+    );
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -102,32 +114,21 @@ const BookingForm = ({ bookingData, setBookingData, preselectedMuseum, loading: 
     // Find the selected museum object
     const selectedMuseum = preselectedMuseum || museums.find(m => m._id === formData.museum);
     
-    // Calculate ticket prices
-    const adultPrice = selectedMuseum?.ticketPrice?.adult || 50;
-    const childPrice = selectedMuseum?.ticketPrice?.child || 0;
-    const seniorPrice = selectedMuseum?.ticketPrice?.senior || 20;
-    
-    // Calculate total
-    const totalAmount = 
-      (parseInt(formData.adultTickets || 0) * adultPrice) + 
-      (parseInt(formData.childTickets || 0) * childPrice) + 
-      (parseInt(formData.seniorTickets || 0) * seniorPrice);
-    
     // Format data for next step
     const bookingFormData = {
-      museum: selectedMuseum,
+      museum: selectedMuseum._id, // Make sure this is the MongoDB _id
       visitDate: formData.visitDate,
       tickets: [
-        { type: 'adult', quantity: parseInt(formData.adultTickets || 0), price: adultPrice },
-        { type: 'child', quantity: parseInt(formData.childTickets || 0), price: childPrice },
-        { type: 'senior', quantity: parseInt(formData.seniorTickets || 0), price: seniorPrice }
+        { type: 'adult', quantity: parseInt(formData.adultTickets || 0), price: 50 },
+        { type: 'child', quantity: parseInt(formData.childTickets || 0), price: 0 },
+        { type: 'senior', quantity: parseInt(formData.seniorTickets || 0), price: 20 }
       ].filter(ticket => ticket.quantity > 0),
       contactInfo: {
         name: formData.contactName,
         email: formData.contactEmail,
         phone: formData.contactPhone
       },
-      totalAmount
+      totalAmount: calculateTotal()
     };
     
     // Update booking data context

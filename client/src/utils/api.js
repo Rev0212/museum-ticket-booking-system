@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Update base URL to match our backend port
 const API_BASE_URL = 'http://localhost:5001/api';
 
 // Create axios instance with default config
@@ -43,8 +44,9 @@ api.interceptors.response.use(
 // Authentication API calls - FIX THESE ENDPOINTS
 export const registerUser = async (userData) => {
   try {
-    // Changed from '/users' to '/auth/register'
     const response = await api.post('/auth/register', userData);
+    localStorage.setItem('token', response.data.token);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
     return response.data;
   } catch (error) {
     throw error.response ? error.response.data : { msg: 'Server error' };
@@ -53,7 +55,6 @@ export const registerUser = async (userData) => {
 
 export const loginUser = async (userData) => {
   try {
-    // Changed from '/auth' to '/auth/login'
     const response = await api.post('/auth/login', userData);
     localStorage.setItem('token', response.data.token);
     localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -106,6 +107,25 @@ export const getMuseumById = async (id) => {
     return response.data;
   } catch (error) {
     throw error.response ? error.response.data : { msg: 'Server error' };
+  }
+};
+
+// Add state-based filtering functions
+export const getMuseumsByState = async (state) => {
+  try {
+    const response = await api.get(`/museums/state/${state}`);
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : { msg: 'Server error' };
+  }
+};
+
+export const getAllStates = async () => {
+  try {
+    const response = await api.get('/museums/states');
+    return response.data;
+  } catch (error) {
+    return ['all']; // Fallback to prevent UI crashes
   }
 };
 

@@ -29,6 +29,19 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MuseumIcon from '@mui/icons-material/Museum';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
+// Mock API functions
+const getAllStates = async () => {
+  return Object.keys(museumsByState);
+};
+
+const getAllMuseums = async () => {
+  return Object.values(museumsByState).flat();
+};
+
+const getMuseumsByState = async (state) => {
+  return museumsByState[state] || [];
+};
+
 // Sample museums data organized by state
 const museumsByState = {
   "Andhra Pradesh": [
@@ -176,22 +189,48 @@ const MuseumsPage = () => {
   const [selectedState, setSelectedState] = useState('all');
   const [filteredStates, setFilteredStates] = useState([]);
   const [expanded, setExpanded] = useState({});
-  
+  const [states, setStates] = useState(['all']);
+  const [museumsByState, setMuseumsByState] = useState({});
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setLoading(false);
-      // Initialize all accordions as expanded
-      const initialExpanded = {};
-      Object.keys(museumsByState).forEach(state => {
-        initialExpanded[state] = true;
-      });
-      setExpanded(initialExpanded);
-    }, 1200);
+    const fetchMuseums = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch available states for filtering
+        const statesData = await getAllStates();
+        setStates(['all', ...statesData]);
+        
+        // Get museums based on selected state
+        let museumsData;
+        if (selectedState === 'all') {
+          museumsData = await getAllMuseums();
+        } else {
+          museumsData = await getMuseumsByState(selectedState);
+        }
+        
+        // Group museums by state for display
+        const groupedMuseums = {};
+        museumsData.forEach(museum => {
+          const state = museum.location.state || 'Other';
+          if (!groupedMuseums[state]) {
+            groupedMuseums[state] = [];
+          }
+          groupedMuseums[state].push(museum);
+        });
+        
+        setMuseumsByState(groupedMuseums);
+      } catch (error) {
+        setError('Failed to load museums');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
-  }, []);
-  
+    fetchMuseums();
+  }, [selectedState]);
+
   useEffect(() => {
     // Apply search and state filters
     const statesAfterFilter = {};
@@ -215,7 +254,7 @@ const MuseumsPage = () => {
     });
     
     setFilteredStates(statesAfterFilter);
-  }, [searchTerm, selectedState]);
+  }, [searchTerm, selectedState, museumsByState]);
   
   const handleStateChange = (event, newValue) => {
     setSelectedState(newValue);
@@ -229,9 +268,6 @@ const MuseumsPage = () => {
     setExpanded({ ...expanded, [state]: isExpanded });
   };
 
-  // Get unique states for tabs
-  const states = ['all', ...Object.keys(museumsByState)];
-  
   return (
     <Box 
       sx={{ 
