@@ -12,7 +12,6 @@ const ChatBot = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // New state variables for enhanced features
   const [conversationContext, setConversationContext] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [userInfo, setUserInfo] = useState({
@@ -73,10 +72,7 @@ const ChatBot = () => {
   const handleBotResponse = (userInput) => {
     setIsTyping(true);
 
-    // Get response text from the input
     const responseText = processUserInput(userInput, language);
-    
-    // Calculate typing time based on response length
     const responseLength = responseText.length;
     const baseDelay = 500;
     const typingSpeed = 15;
@@ -84,23 +80,15 @@ const ChatBot = () => {
 
     setTimeout(() => {
       setIsTyping(false);
-
-      const response = {
-        text: responseText,
-        sender: 'bot'
-      };
-
+      const response = { text: responseText, sender: 'bot' };
       setMessages(prev => [...prev, response]);
-      
-      // Generate relevant suggestions based on the conversation
       generateSuggestions(userInput, responseText);
     }, responseTime);
   };
 
   const processUserInput = (input, lang) => {
     const lowerInput = input.toLowerCase();
-    
-    // Extract name if user introduces themselves
+
     if (lowerInput.includes("my name is") || lowerInput.includes("i am ")) {
       const nameMatch = input.match(/my name is\s+([A-Za-z\s]+)|i am\s+([A-Za-z\s]+)/i);
       if (nameMatch) {
@@ -109,29 +97,23 @@ const ChatBot = () => {
         return `Nice to meet you, ${name.trim()}! How can I help with your museum visit?`;
       }
     }
-    
-    // Extract email
+
     const emailMatch = input.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
     if (emailMatch) {
       setUserInfo(prev => ({...prev, email: emailMatch[0]}));
       return `Thank you! I've noted your email address. Would you like to receive ticket confirmation at this email?`;
     }
-    
-    // Check conversation context
+
     const contextFromHistory = getConversationContext();
-    
-    // Handle booking conversation flow
+
     if (contextFromHistory === 'booking') {
       switch(bookingStep) {
         case 'quantity':
-          // Extract ticket quantities
           const adults = input.match(/(\d+)\s*adult/i);
           const children = input.match(/(\d+)\s*child/i);
           const seniors = input.match(/(\d+)\s*senior/i);
-          
-          // If no match but there are numbers, assume it's adults
           const anyNumber = input.match(/\b(\d+)\b/);
-          
+
           if (adults || children || seniors || anyNumber) {
             setUserInfo(prev => ({
               ...prev, 
@@ -141,14 +123,12 @@ const ChatBot = () => {
                 seniors: seniors ? parseInt(seniors[1]) : 0
               }
             }));
-            
             setBookingStep('date');
             return "Great! For which date would you like to book your tickets?";
           }
           return "Please specify how many tickets you need (e.g., '2 adults, 1 child')";
-          
+
         case 'date':
-          // Extract date information
           const dateMatch = input.match(/(\d+\/\d+\/\d+)|today|tomorrow|next\s+\w+|this\s+\w+/i);
           if (dateMatch || lowerInput.includes('today') || lowerInput.includes('tomorrow')) {
             setUserInfo(prev => ({...prev, visitDate: dateMatch ? dateMatch[0] : input}));
@@ -156,14 +136,11 @@ const ChatBot = () => {
             return "Perfect! Which museum would you like to visit?";
           }
           return "Please specify a date for your visit (e.g., DD/MM/YYYY or 'tomorrow')";
-          
+
         case 'museum':
           setUserInfo(prev => ({...prev, preferredMuseum: input}));
           setBookingStep('confirmation');
-          
-          // Calculate price
           const price = calculatePrice(userInfo.ticketQuantity);
-          
           return `Thank you! Here's your booking summary:\n
           - Museum: ${input}
           - Date: ${userInfo.visitDate}
@@ -171,7 +148,7 @@ const ChatBot = () => {
           - Total price: ₹${price}
           
           Would you like to confirm this booking?`;
-          
+
         case 'confirmation':
           if (lowerInput.includes('yes') || lowerInput.includes('confirm') || lowerInput.includes('ok')) {
             setBookingStep(null);
@@ -182,32 +159,43 @@ const ChatBot = () => {
             setConversationContext(null);
             return "Booking cancelled. Feel free to start a new booking whenever you're ready.";
           }
-          
+
         default:
           setBookingStep('quantity');
           return "How many tickets would you like to book? (adults, children, seniors)";
       }
     }
-    
-    // Context-aware response logic
+
+    // Fix 1: Expanded keyword match for timing-related queries
+    if (
+      lowerInput.includes('time') ||
+      lowerInput.includes('hour') ||
+      lowerInput.includes('open') ||
+      lowerInput.includes('timing') ||
+      lowerInput.includes('schedule')
+    ) {
+      return `The museum is open from 9:00 AM to 5:00 PM Tuesday through Sunday. We're closed on Mondays.`;
+    }
+
+    // Fix 2: Handle student-related price questions
+    if (lowerInput.includes('student')) {
+      return `Currently, there is no separate pricing for students. Ticket rates are:\n- Adult: ₹50\n- Child: Free\n- Senior: ₹20`;
+    }
+
     if (lowerInput.includes('book') || lowerInput.includes('ticket') || lowerInput.includes('reserve')) {
       setConversationContext('booking');
       setBookingStep('quantity');
       return translations[lang].bookingPrompt;
     }
-    
-    if (lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('fee')) {
-      return translations[lang].priceInfo;
-    }
-    
-    if (lowerInput.includes('time') || lowerInput.includes('hour') || lowerInput.includes('open')) {
-      return `The museum is open from 9:00 AM to 5:00 PM Tuesday through Sunday. We're closed on Mondays.`;
-    }
-    
+
     if (lowerInput.includes('exhibit') || lowerInput.includes('display') || lowerInput.includes('show')) {
       return `We currently have these exciting exhibitions:\n- Ancient Civilizations Gallery\n- Modern Art Exhibition\n- Natural History Wing\n- Interactive Science Displays\n\nWhich one interests you the most?`;
     }
-    
+
+    if (lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('fee')) {
+      return translations[lang].priceInfo;
+    }
+
     if (lowerInput.includes('hello') || lowerInput.includes('hi ') || lowerInput === 'hi') {
       return `Hello${userInfo.name ? ' ' + userInfo.name : ''}! How can I help you with your museum visit today?`;
     }
@@ -215,79 +203,35 @@ const ChatBot = () => {
     if (lowerInput.includes('thank')) {
       return `You're welcome${userInfo.name ? ' ' + userInfo.name : ''}! Is there anything else I can help you with?`;
     }
-    
-    // Fallback
+
     return `I'm not sure I understand. ${translations[lang].options}`;
   };
 
-  // Helper functions for the enhanced chatbot
-  const getConversationContext = () => {
-    return conversationContext;
-  };
-
-  const getPersonalizedGreeting = () => {
-    if (userInfo.name) {
-      return `How else can I help you today, ${userInfo.name}?`;
-    }
-    return "How else can I help you today?";
-  };
-
-  const calculatePrice = (quantity) => {
-    if (!quantity) return 0;
-    
-    const adultPrice = 50;
-    const childPrice = 0;
-    const seniorPrice = 20;
-    
-    return (quantity.adults || 0) * adultPrice + 
-           (quantity.children || 0) * childPrice + 
-           (quantity.seniors || 0) * seniorPrice;
-  };
+  const getConversationContext = () => conversationContext;
+  const getPersonalizedGreeting = () => userInfo.name ? `How else can I help you today, ${userInfo.name}?` : "How else can I help you today?";
+  const calculatePrice = (quantity) => !quantity ? 0 : (quantity.adults || 0) * 50 + (quantity.children || 0) * 0 + (quantity.seniors || 0) * 20;
 
   const formatTickets = (quantity) => {
     if (!quantity) return "No tickets";
-    
     const parts = [];
     if (quantity.adults) parts.push(`${quantity.adults} adult${quantity.adults > 1 ? 's' : ''}`);
     if (quantity.children) parts.push(`${quantity.children} child${quantity.children > 1 ? 'ren' : ''}`);
     if (quantity.seniors) parts.push(`${quantity.seniors} senior${quantity.seniors > 1 ? 's' : ''}`);
-    
     return parts.join(', ');
   };
 
   const generateSuggestions = (userInput, botResponse) => {
     const lowerInput = userInput.toLowerCase();
-    
     if (botResponse.includes("book tickets") || botResponse.includes("specify")) {
-      setSuggestions([
-        "2 adults, 1 child",
-        "Museum timings?",
-        "What are the prices?"
-      ]);
+      setSuggestions(["2 adults, 1 child", "Museum timings?", "What are the prices?"]);
     } else if (botResponse.includes("exhibition") || botResponse.includes("display")) {
-      setSuggestions([
-        "Tell me about Ancient Civilizations",
-        "Interactive Science Displays",
-        "Ticket prices"
-      ]);
+      setSuggestions(["Tell me about Ancient Civilizations", "Interactive Science Displays", "Ticket prices"]);
     } else if (botResponse.includes("date")) {
-      setSuggestions([
-        "Tomorrow",
-        "Next Saturday",
-        "10/05/2025"
-      ]);
+      setSuggestions(["Tomorrow", "Next Saturday", "10/05/2025"]);
     } else if (botResponse.includes("museum")) {
-      setSuggestions([
-        "National Museum",
-        "Art Gallery",
-        "Science Museum"
-      ]);
+      setSuggestions(["National Museum", "Art Gallery", "Science Museum"]);
     } else {
-      setSuggestions([
-        "Book tickets",
-        "Opening hours",
-        "Current exhibitions"
-      ]);
+      setSuggestions(["Book tickets", "Opening hours", "Current exhibitions"]);
     }
   };
 
