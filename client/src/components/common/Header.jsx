@@ -40,7 +40,7 @@ const Header = () => {
                 <Button color="inherit" component={RouterLink} to="/dashboard">
                   Dashboard
                 </Button>
-                <Button color="inherit" component={RouterLink} to="/bookings/new">
+                <Button color="inherit" component={RouterLink} to="/booking">
                   Book Tickets
                 </Button>
                 <Button color="inherit" component={RouterLink} to="/profile">

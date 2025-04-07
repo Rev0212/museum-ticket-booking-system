@@ -304,7 +304,7 @@ const Dashboard = () => {
                     <Button 
                       variant="outlined"
                       component={RouterLink}
-                      to="/bookings/new"
+                      to="/booking"
                     >
                       Book Tickets
                     </Button>
