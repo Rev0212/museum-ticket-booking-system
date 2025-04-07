@@ -59,6 +59,13 @@ const bookingSchema = new mongoose.Schema({
   bookingDate: {
     type: Date,
     default: Date.now
+  },
+  bookingReference: {
+    type: String,
+    unique: true
+  },
+  qrCode: {
+    type: String
   }
 });
 
