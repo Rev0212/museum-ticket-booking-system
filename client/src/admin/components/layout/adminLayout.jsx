@@ -1,8 +1,10 @@
 import React from 'react';
 import { Box } from '@mui/material';
-// Add this missing import
-import Sidebar from './Sidebar';
 import Header from './Header';
+import Sidebar from './Sidebar';
+
+// Create temporary inline sidebar until you implement a full one
+
 
 const AdminLayout = ({ children }) => {
   return (

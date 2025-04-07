@@ -1,24 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  ModalFooter,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Textarea,
-  SimpleGrid,
+  TextField,
+  FormControlLabel,
+  Grid,
   Switch,
+  InputAdornment,
   Box,
-  FormErrorMessage,
-  InputGroup,
-  InputLeftAddon,
-} from '@chakra-ui/react';
+  Typography
+} from '@mui/material';
 import { createMuseum, updateMuseum } from '../../utils/adminApi';
 
 const defaultMuseum = {
@@ -47,7 +41,7 @@ const defaultMuseum = {
   featured: false,
 };
 
-const MuseumForm = ({ isOpen, onClose, museum }) => {
+const MuseumForm = ({ open, onClose, museum }) => {
   const [formData, setFormData] = useState(defaultMuseum);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +60,6 @@ const MuseumForm = ({ isOpen, onClose, museum }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name.includes('.')) {
-      // Handle nested objects (e.g., location.address)
       const [parent, child] = name.split('.');
       setFormData({
         ...formData,
@@ -111,10 +104,8 @@ const MuseumForm = ({ isOpen, onClose, museum }) => {
       
       const formDataToSend = new FormData();
       
-      // Append museum data
       Object.keys(formData).forEach(key => {
         if (typeof formData[key] === 'object' && formData[key] !== null && !Array.isArray(formData[key])) {
-          // Handle nested objects
           Object.keys(formData[key]).forEach(nestedKey => {
             formDataToSend.append(`${key}.${nestedKey}`, formData[key][nestedKey]);
           });
@@ -123,7 +114,6 @@ const MuseumForm = ({ isOpen, onClose, museum }) => {
         }
       });
       
-      // Append images if any
       if (images.length > 0) {
         images.forEach(image => {
           formDataToSend.append('images', image);
@@ -136,7 +126,7 @@ const MuseumForm = ({ isOpen, onClose, museum }) => {
         await createMuseum(formDataToSend);
       }
       
-      onClose(true); // Close and refresh data
+      onClose(true);
     } catch (error) {
       console.error('Error saving museum:', error);
     } finally {
@@ -145,178 +135,245 @@ const MuseumForm = ({ isOpen, onClose, museum }) => {
   };
   
   return (
-    <Modal isOpen={isOpen} onClose={() => onClose()} size="xl">
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>
-          {isEditMode ? 'Edit Museum' : 'Add New Museum'}
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <SimpleGrid columns={1} spacing={4}>
-            <FormControl isRequired isInvalid={errors.name}>
-              <FormLabel>Museum Name</FormLabel>
-              <Input 
-                name="name" 
-                value={formData.name} 
-                onChange={handleChange} 
+    <Dialog 
+      open={open} 
+      onClose={() => onClose()} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: { bgcolor: 'background.paper' }
+      }}
+    >
+      <DialogTitle>
+        {isEditMode ? 'Edit Museum' : 'Add New Museum'}
+      </DialogTitle>
+      
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Museum Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                error={!!errors.name}
+                helperText={errors.name}
               />
-              <FormErrorMessage>{errors.name}</FormErrorMessage>
-            </FormControl>
+            </Grid>
             
-            <FormControl isRequired isInvalid={errors.description}>
-              <FormLabel>Description</FormLabel>
-              <Textarea 
-                name="description" 
-                value={formData.description} 
-                onChange={handleChange} 
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                multiline
                 rows={4}
+                required
+                error={!!errors.description}
+                helperText={errors.description}
               />
-              <FormErrorMessage>{errors.description}</FormErrorMessage>
-            </FormControl>
+            </Grid>
             
-            <FormControl>
-              <FormLabel>Location</FormLabel>
-              <SimpleGrid columns={2} spacing={3}>
-                <Input 
-                  placeholder="Address" 
-                  name="location.address" 
-                  value={formData.location.address} 
-                  onChange={handleChange} 
-                />
-                <Input 
-                  placeholder="City" 
-                  name="location.city" 
-                  value={formData.location.city} 
-                  onChange={handleChange} 
-                />
-                <Input 
-                  placeholder="State" 
-                  name="location.state" 
-                  value={formData.location.state} 
-                  onChange={handleChange} 
-                />
-                <Input 
-                  placeholder="Country" 
-                  name="location.country" 
-                  value={formData.location.country} 
-                  onChange={handleChange} 
-                />
-              </SimpleGrid>
-            </FormControl>
-            
-            <FormControl>
-              <FormLabel>Ticket Prices</FormLabel>
-              <SimpleGrid columns={3} spacing={3}>
-                <InputGroup>
-                  <InputLeftAddon>Adult</InputLeftAddon>
-                  <Input 
-                    type="number" 
-                    name="ticketPrices.adult" 
-                    value={formData.ticketPrices.adult} 
-                    onChange={handleChange} 
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Location</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Address"
+                    name="location.address"
+                    value={formData.location.address}
+                    onChange={handleChange}
                   />
-                </InputGroup>
-                <InputGroup>
-                  <InputLeftAddon>Child</InputLeftAddon>
-                  <Input 
-                    type="number" 
-                    name="ticketPrices.child" 
-                    value={formData.ticketPrices.child} 
-                    onChange={handleChange} 
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="City"
+                    name="location.city"
+                    value={formData.location.city}
+                    onChange={handleChange}
                   />
-                </InputGroup>
-                <InputGroup>
-                  <InputLeftAddon>Senior</InputLeftAddon>
-                  <Input 
-                    type="number" 
-                    name="ticketPrices.senior" 
-                    value={formData.ticketPrices.senior} 
-                    onChange={handleChange} 
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="State"
+                    name="location.state"
+                    value={formData.location.state}
+                    onChange={handleChange}
                   />
-                </InputGroup>
-              </SimpleGrid>
-            </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Country"
+                    name="location.country"
+                    value={formData.location.country}
+                    onChange={handleChange}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
             
-            <FormControl>
-              <FormLabel>Opening Hours</FormLabel>
-              <SimpleGrid columns={2} spacing={3}>
-                <Input 
-                  type="time" 
-                  name="openingHours.open" 
-                  value={formData.openingHours.open} 
-                  onChange={handleChange} 
-                />
-                <Input 
-                  type="time" 
-                  name="openingHours.close" 
-                  value={formData.openingHours.close} 
-                  onChange={handleChange} 
-                />
-              </SimpleGrid>
-            </FormControl>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Ticket Prices</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Adult"
+                    type="number"
+                    name="ticketPrices.adult"
+                    value={formData.ticketPrices.adult}
+                    onChange={handleChange}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Child"
+                    type="number"
+                    name="ticketPrices.child"
+                    value={formData.ticketPrices.child}
+                    onChange={handleChange}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Senior"
+                    type="number"
+                    name="ticketPrices.senior"
+                    value={formData.ticketPrices.senior}
+                    onChange={handleChange}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
             
-            <FormControl>
-              <FormLabel>Contact Information</FormLabel>
-              <SimpleGrid columns={1} spacing={3}>
-                <Input 
-                  placeholder="Phone" 
-                  name="contactInfo.phone" 
-                  value={formData.contactInfo.phone} 
-                  onChange={handleChange} 
-                />
-                <Input 
-                  placeholder="Email" 
-                  name="contactInfo.email" 
-                  value={formData.contactInfo.email} 
-                  onChange={handleChange} 
-                />
-                <Input 
-                  placeholder="Website" 
-                  name="contactInfo.website" 
-                  value={formData.contactInfo.website} 
-                  onChange={handleChange} 
-                />
-              </SimpleGrid>
-            </FormControl>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Opening Hours</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Opening Time"
+                    type="time"
+                    name="openingHours.open"
+                    value={formData.openingHours.open}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Closing Time"
+                    type="time"
+                    name="openingHours.close"
+                    value={formData.openingHours.close}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
             
-            <FormControl>
-              <FormLabel>Museum Images</FormLabel>
-              <Input 
-                type="file" 
-                multiple 
-                accept="image/*" 
-                onChange={handleImageChange}
-                p={1}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Contact Information</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Phone"
+                    name="contactInfo.phone"
+                    value={formData.contactInfo.phone}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    name="contactInfo.email"
+                    value={formData.contactInfo.email}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Website"
+                    name="contactInfo.website"
+                    value={formData.contactInfo.website}
+                    onChange={handleChange}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="subtitle1">Museum Images</Typography>
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  type="file"
+                  inputProps={{ multiple: true, accept: "image/*" }}
+                  onChange={handleImageChange}
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.featured}
+                    onChange={handleSwitchChange}
+                    name="featured"
+                    color="primary"
+                  />
+                }
+                label="Featured Museum"
               />
-            </FormControl>
-            
-            <FormControl display="flex" alignItems="center">
-              <FormLabel htmlFor="featured" mb="0">
-                Featured Museum
-              </FormLabel>
-              <Switch 
-                id="featured" 
-                isChecked={formData.featured} 
-                onChange={handleSwitchChange} 
-              />
-            </FormControl>
-          </SimpleGrid>
-        </ModalBody>
-        
-        <ModalFooter>
-          <Button 
-            colorScheme="blue" 
-            mr={3} 
-            onClick={handleSubmit}
-            isLoading={isSubmitting}
-          >
-            {isEditMode ? 'Update' : 'Create'}
-          </Button>
-          <Button variant="ghost" onClick={() => onClose()}>Cancel</Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
+      
+      <DialogActions sx={{ bgcolor: 'background.paper', px: 3, py: 2 }}>
+        <Button
+          onClick={() => onClose()}
+          color="inherit"
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSubmit}
+          variant="contained" 
+          color="primary"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
