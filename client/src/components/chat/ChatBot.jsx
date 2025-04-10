@@ -69,142 +69,160 @@ const ChatBot = () => {
     }
   };
 
-  const handleBotResponse = (userInput) => {
+  const callOllamaAPI = async (userMessage) => {
+    try {
+      const endpoint = 'https://1hl9rpqb-11434.inc1.devtunnels.ms/api/generate';
+      
+      const context = messages.slice(-5).map(msg => {
+        return `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`;
+      }).join('\n');
+
+      const systemPrompt = `You are a helpful museum virtual assistant for the Museum Ticket Booking System. 
+      You provide information about museum timings, ticket prices, exhibitions, and help with bookings.
+      Respond in ${language === 'en' ? 'English' : 'Hindi'}.
+      Today's date is ${new Date().toLocaleDateString()}.
+      Keep your responses concise, friendly and helpful.
+      
+      Information you should know:
+      - Adult tickets cost ₹50
+      - Children enter for free
+      - Senior tickets cost ₹20
+      - Museums are typically open from 9:00 AM to 5:00 PM Tuesday through Sunday, closed on Mondays
+      - Current exhibitions include: Ancient Civilizations Gallery, Modern Art Exhibition, Natural History Wing, and Interactive Science Displays`;
+      
+      const prompt = `${systemPrompt}\n\n${context}\nUser: ${userMessage}\nAssistant:`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3', 
+          prompt: prompt,
+          stream: false
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.response || "Sorry, I couldn't process your request.";
+    } catch (error) {
+      console.error('Error calling Ollama API:', error);
+      return "I'm having trouble connecting to my knowledge base. Please try again later.";
+    }
+  };
+
+  const handleBotResponse = async (userInput) => {
     setIsTyping(true);
 
-    const responseText = processUserInput(userInput, language);
-    const responseLength = responseText.length;
-    const baseDelay = 500;
-    const typingSpeed = 15;
-    const responseTime = Math.min(baseDelay + responseLength * typingSpeed, 3000);
+    try {
+      let responseText;
+      const lowerInput = userInput.toLowerCase();
+      
+      if (conversationContext === 'booking' && bookingStep) {
+        switch(bookingStep) {
+          case 'quantity':
+            const adults = userInput.match(/(\d+)\s*adult/i);
+            const children = userInput.match(/(\d+)\s*child/i);
+            const seniors = userInput.match(/(\d+)\s*senior/i);
+            const anyNumber = userInput.match(/\b(\d+)\b/);
 
-    setTimeout(() => {
+            if (adults || children || seniors || anyNumber) {
+              setUserInfo(prev => ({
+                ...prev, 
+                ticketQuantity: {
+                  adults: adults ? parseInt(adults[1]) : (anyNumber ? parseInt(anyNumber[1]) : 0),
+                  children: children ? parseInt(children[1]) : 0,
+                  seniors: seniors ? parseInt(seniors[1]) : 0
+                }
+              }));
+              setBookingStep('date');
+              responseText = "Great! For which date would you like to book your tickets?";
+            } else {
+              responseText = "Please specify how many tickets you need (e.g., '2 adults, 1 child')";
+            }
+            break;
+
+          case 'date':
+            const dateMatch = userInput.match(/(\d+\/\d+\/\d+)|today|tomorrow|next\s+\w+|this\s+\w+/i);
+            if (dateMatch || lowerInput.includes('today') || lowerInput.includes('tomorrow')) {
+              setUserInfo(prev => ({...prev, visitDate: dateMatch ? dateMatch[0] : userInput}));
+              setBookingStep('museum');
+              responseText = "Perfect! Which museum would you like to visit?";
+            } else {
+              responseText = "Please specify a date for your visit (e.g., DD/MM/YYYY or 'tomorrow')";
+            }
+            break;
+
+          case 'museum':
+            setUserInfo(prev => ({...prev, preferredMuseum: userInput}));
+            setBookingStep('confirmation');
+            const price = calculatePrice(userInfo.ticketQuantity);
+            responseText = `Thank you! Here's your booking summary:\n
+            - Museum: ${userInput}
+            - Date: ${userInfo.visitDate}
+            - Tickets: ${formatTickets(userInfo.ticketQuantity)}
+            - Total price: ₹${price}
+            
+            Would you like to confirm this booking?`;
+            break;
+
+          case 'confirmation':
+            if (lowerInput.includes('yes') || lowerInput.includes('confirm') || lowerInput.includes('ok')) {
+              setBookingStep(null);
+              setConversationContext(null);
+              responseText = `Booking confirmed! You'll receive a confirmation email${userInfo.email ? ' at ' + userInfo.email : ' shortly'}. Your booking reference is: MUS-${Math.floor(100000 + Math.random() * 900000)}.\n\n${getPersonalizedGreeting()}`;
+            } else {
+              setBookingStep(null);
+              setConversationContext(null);
+              responseText = "Booking cancelled. Feel free to start a new booking whenever you're ready.";
+            }
+            break;
+
+          default:
+            setBookingStep('quantity');
+            responseText = "How many tickets would you like to book? (adults, children, seniors)";
+        }
+      } else {
+        responseText = await callOllamaAPI(userInput);
+        
+        if (lowerInput.includes('book') || lowerInput.includes('ticket') || lowerInput.includes('reserve')) {
+          setConversationContext('booking');
+          setBookingStep('quantity');
+          responseText = translations[language].bookingPrompt;
+        }
+
+        const emailMatch = userInput.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) {
+          setUserInfo(prev => ({...prev, email: emailMatch[0]}));
+        }
+
+        if (lowerInput.includes("my name is") || lowerInput.includes("i am ")) {
+          const nameMatch = userInput.match(/my name is\s+([A-Za-z\s]+)|i am\s+([A-Za-z\s]+)/i);
+          if (nameMatch) {
+            const name = nameMatch[1] || nameMatch[2];
+            setUserInfo(prev => ({...prev, name: name.trim()}));
+          }
+        }
+      }
+
       setIsTyping(false);
       const response = { text: responseText, sender: 'bot' };
       setMessages(prev => [...prev, response]);
       generateSuggestions(userInput, responseText);
-    }, responseTime);
-  };
-
-  const processUserInput = (input, lang) => {
-    const lowerInput = input.toLowerCase();
-
-    if (lowerInput.includes("my name is") || lowerInput.includes("i am ")) {
-      const nameMatch = input.match(/my name is\s+([A-Za-z\s]+)|i am\s+([A-Za-z\s]+)/i);
-      if (nameMatch) {
-        const name = nameMatch[1] || nameMatch[2];
-        setUserInfo(prev => ({...prev, name: name.trim()}));
-        return `Nice to meet you, ${name.trim()}! How can I help with your museum visit?`;
-      }
+    } catch (err) {
+      console.error('Error in bot response:', err);
+      setIsTyping(false);
+      const errorMessage = { 
+        text: "I'm having trouble processing your request right now. Please try again later.", 
+        sender: 'bot' 
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
-
-    const emailMatch = input.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    if (emailMatch) {
-      setUserInfo(prev => ({...prev, email: emailMatch[0]}));
-      return `Thank you! I've noted your email address. Would you like to receive ticket confirmation at this email?`;
-    }
-
-    const contextFromHistory = getConversationContext();
-
-    if (contextFromHistory === 'booking') {
-      switch(bookingStep) {
-        case 'quantity':
-          const adults = input.match(/(\d+)\s*adult/i);
-          const children = input.match(/(\d+)\s*child/i);
-          const seniors = input.match(/(\d+)\s*senior/i);
-          const anyNumber = input.match(/\b(\d+)\b/);
-
-          if (adults || children || seniors || anyNumber) {
-            setUserInfo(prev => ({
-              ...prev, 
-              ticketQuantity: {
-                adults: adults ? parseInt(adults[1]) : (anyNumber ? parseInt(anyNumber[1]) : 0),
-                children: children ? parseInt(children[1]) : 0,
-                seniors: seniors ? parseInt(seniors[1]) : 0
-              }
-            }));
-            setBookingStep('date');
-            return "Great! For which date would you like to book your tickets?";
-          }
-          return "Please specify how many tickets you need (e.g., '2 adults, 1 child')";
-
-        case 'date':
-          const dateMatch = input.match(/(\d+\/\d+\/\d+)|today|tomorrow|next\s+\w+|this\s+\w+/i);
-          if (dateMatch || lowerInput.includes('today') || lowerInput.includes('tomorrow')) {
-            setUserInfo(prev => ({...prev, visitDate: dateMatch ? dateMatch[0] : input}));
-            setBookingStep('museum');
-            return "Perfect! Which museum would you like to visit?";
-          }
-          return "Please specify a date for your visit (e.g., DD/MM/YYYY or 'tomorrow')";
-
-        case 'museum':
-          setUserInfo(prev => ({...prev, preferredMuseum: input}));
-          setBookingStep('confirmation');
-          const price = calculatePrice(userInfo.ticketQuantity);
-          return `Thank you! Here's your booking summary:\n
-          - Museum: ${input}
-          - Date: ${userInfo.visitDate}
-          - Tickets: ${formatTickets(userInfo.ticketQuantity)}
-          - Total price: ₹${price}
-          
-          Would you like to confirm this booking?`;
-
-        case 'confirmation':
-          if (lowerInput.includes('yes') || lowerInput.includes('confirm') || lowerInput.includes('ok')) {
-            setBookingStep(null);
-            setConversationContext(null);
-            return `Booking confirmed! You'll receive a confirmation email${userInfo.email ? ' at ' + userInfo.email : ' shortly'}. Your booking reference is: MUS-${Math.floor(100000 + Math.random() * 900000)}.\n\n${getPersonalizedGreeting()}`;
-          } else {
-            setBookingStep(null);
-            setConversationContext(null);
-            return "Booking cancelled. Feel free to start a new booking whenever you're ready.";
-          }
-
-        default:
-          setBookingStep('quantity');
-          return "How many tickets would you like to book? (adults, children, seniors)";
-      }
-    }
-
-    // Fix 1: Expanded keyword match for timing-related queries
-    if (
-      lowerInput.includes('time') ||
-      lowerInput.includes('hour') ||
-      lowerInput.includes('open') ||
-      lowerInput.includes('timing') ||
-      lowerInput.includes('schedule')
-    ) {
-      return `The museum is open from 9:00 AM to 5:00 PM Tuesday through Sunday. We're closed on Mondays.`;
-    }
-
-    // Fix 2: Handle student-related price questions
-    if (lowerInput.includes('student')) {
-      return `Currently, there is no separate pricing for students. Ticket rates are:\n- Adult: ₹50\n- Child: Free\n- Senior: ₹20`;
-    }
-
-    if (lowerInput.includes('book') || lowerInput.includes('ticket') || lowerInput.includes('reserve')) {
-      setConversationContext('booking');
-      setBookingStep('quantity');
-      return translations[lang].bookingPrompt;
-    }
-
-    if (lowerInput.includes('exhibit') || lowerInput.includes('display') || lowerInput.includes('show')) {
-      return `We currently have these exciting exhibitions:\n- Ancient Civilizations Gallery\n- Modern Art Exhibition\n- Natural History Wing\n- Interactive Science Displays\n\nWhich one interests you the most?`;
-    }
-
-    if (lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('fee')) {
-      return translations[lang].priceInfo;
-    }
-
-    if (lowerInput.includes('hello') || lowerInput.includes('hi ') || lowerInput === 'hi') {
-      return `Hello${userInfo.name ? ' ' + userInfo.name : ''}! How can I help you with your museum visit today?`;
-    }
-
-    if (lowerInput.includes('thank')) {
-      return `You're welcome${userInfo.name ? ' ' + userInfo.name : ''}! Is there anything else I can help you with?`;
-    }
-
-    return `I'm not sure I understand. ${translations[lang].options}`;
   };
 
   const getConversationContext = () => conversationContext;
