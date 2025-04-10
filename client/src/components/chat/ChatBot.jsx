@@ -31,7 +31,16 @@ const ChatBot = () => {
       options: "You can ask about:\n1. Museum timings\n2. Ticket prices\n3. Book tickets\n4. Check availability\n5. Exhibition details",
       bookingPrompt: "I'd be happy to help you book tickets! Could you please specify:\n- How many adults, children or seniors?\n- Which date are you planning to visit?\n- Which museum are you interested in?",
       priceInfo: "Ticket Prices:\n- Adult: ₹50\n- Child: Free\n- Senior: ₹20",
-      thinking: "Thinking..."
+      thinking: "Thinking...",
+      quantityRequest: "How many tickets would you like to book? (adults, children, seniors)",
+      quantityError: "Please specify how many tickets you need (e.g., '2 adults, 1 child')",
+      dateRequest: "Great! For which date would you like to book your tickets?",
+      dateError: "Please specify a date for your visit (e.g., DD/MM/YYYY or 'tomorrow')",
+      museumRequest: "Perfect! Which museum would you like to visit?",
+      bookingConfirmed: "Booking confirmed! You'll receive a confirmation email",
+      bookingCancelled: "Booking cancelled. Feel free to start a new booking whenever you're ready.",
+      confirmPrompt: "Would you like to confirm this booking?",
+      bookingSummary: "Thank you! Here's your booking summary:"
     },
     hi: {
       welcome: "नमस्ते! मैं आपकी संग्रहालय टिकट बुक करने में मदद कर सकता हूं। आप क्या करना चाहेंगे?",
@@ -39,7 +48,33 @@ const ChatBot = () => {
       options: "आप पूछ सकते हैं:\n1. संग्रहालय का समय\n2. टिकट की कीमतें\n3. टिकट बुक करें\n4. उपलब्धता जांचें",
       bookingPrompt: "क्या आप अभी टिकट बुक करना चाहेंगे?",
       priceInfo: "टिकट की कीमतें:\n- वयस्क: ₹50\n- बच्चा: नि:शुल्क\n- वरिष्ठ नागरिक: ₹20",
-      thinking: "सोच रहा हूँ..."
+      thinking: "सोच रहा हूँ...",
+      quantityRequest: "आप कितने टिकट बुक करना चाहते हैं? (वयस्क, बच्चे, वरिष्ठ नागरिक)",
+      quantityError: "कृपया बताएं कि आपको कितने टिकट चाहिए (जैसे, '2 वयस्क, 1 बच्चा')",
+      dateRequest: "बढ़िया! आप किस तारीख के लिए अपने टिकट बुक करना चाहेंगे?",
+      dateError: "कृपया अपनी यात्रा के लिए एक तारीख निर्दिष्ट करें (उदाहरण, DD/MM/YYYY या 'कल')",
+      museumRequest: "बिलकुल सही! आप कौन सा संग्रहालय देखना चाहेंगे?",
+      bookingConfirmed: "बुकिंग की पुष्टि हो गई है! आपको एक पुष्टिकरण ईमेल प्राप्त होगा",
+      bookingCancelled: "बुकिंग रद्द कर दी गई है। जब भी आप तैयार हों, एक नई बुकिंग शुरू करें।",
+      confirmPrompt: "क्या आप इस बुकिंग की पुष्टि करना चाहेंगे?",
+      bookingSummary: "धन्यवाद! यहां आपकी बुकिंग का सारांश है:"
+    },
+    ta: {
+      welcome: "வணக்கம்! நான் உங்கள் அருங்காட்சியக உதவியாளர். நான் உங்களுக்கு எப்படி உதவ முடியும்?",
+      placeholder: "உங்கள் செய்தியை தட்டச்சு செய்யுங்கள்...",
+      options: "நீங்கள் கேட்கலாம்:\n1. அருங்காட்சியக நேரங்கள்\n2. டிக்கெட் விலைகள்\n3. டிக்கெட் முன்பதிவு\n4. கிடைக்கும் தன்மையை சரிபார்க்க",
+      bookingPrompt: "டிக்கெட் முன்பதிவு செய்ய விரும்புகிறீர்களா?",
+      priceInfo: "டிக்கெட் விலைகள்:\n- பெரியவர்: ₹50\n- குழந்தை: இலவசம்\n- மூத்த குடிமக்கள்: ₹20",
+      thinking: "யோசிக்கிறேன்...",
+      quantityRequest: "எத்தனை டிக்கெட்டுகள் முன்பதிவு செய்ய விரும்புகிறீர்கள்? (பெரியவர்கள், குழந்தைகள், மூத்த குடிமக்கள்)",
+      quantityError: "தயவுசெய்து உங்களுக்கு எத்தனை டிக்கெட்டுகள் தேவை என்பதைக் குறிப்பிடவும் (எ.கா., '2 பெரியவர்கள், 1 குழந்தை')",
+      dateRequest: "சிறப்பு! எந்த தேதிக்கு உங்கள் டிக்கெட்டுகளை முன்பதிவு செய்ய விரும்புகிறீர்கள்?",
+      dateError: "தயவுசெய்து உங்கள் வருகைக்கான தேதியைக் குறிப்பிடவும் (எ.கா., DD/MM/YYYY அல்லது 'நாளை')",
+      museumRequest: "சரியாக! நீங்கள் எந்த அருங்காட்சியகத்தைப் பார்வையிட விரும்புகிறீர்கள்?",
+      bookingConfirmed: "முன்பதிவு உறுதி செய்யப்பட்டது! உங்களுக்கு உறுதிப்படுத்தல் மின்னஞ்சல் வரும்",
+      bookingCancelled: "முன்பதிவு ரத்து செய்யப்பட்டது. நீங்கள் தயாராக இருக்கும்போது புதிய முன்பதிவைத் தொடங்கலாம்.",
+      confirmPrompt: "இந்த முன்பதிவை உறுதிப்படுத்த விரும்புகிறீர்களா?",
+      bookingSummary: "நன்றி! இதோ உங்கள் முன்பதிவு சுருக்கம்:"
     }
   };
 
@@ -77,9 +112,11 @@ const ChatBot = () => {
         return `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`;
       }).join('\n');
 
+      const responseLang = language === 'en' ? 'English' : (language === 'hi' ? 'Hindi' : 'Tamil');
+      
       const systemPrompt = `You are a helpful museum virtual assistant for the Museum Ticket Booking System. 
       You provide information about museum timings, ticket prices, exhibitions, and help with bookings.
-      Respond in ${language === 'en' ? 'English' : 'Hindi'}.
+      IMPORTANT: Respond in ${responseLang} regardless of what language the user types in.
       Today's date is ${new Date().toLocaleDateString()}.
       Keep your responses concise, friendly and helpful.
       
@@ -141,9 +178,9 @@ const ChatBot = () => {
                 }
               }));
               setBookingStep('date');
-              responseText = "Great! For which date would you like to book your tickets?";
+              responseText = translations[language].dateRequest;
             } else {
-              responseText = "Please specify how many tickets you need (e.g., '2 adults, 1 child')";
+              responseText = translations[language].quantityError;
             }
             break;
 
@@ -152,9 +189,9 @@ const ChatBot = () => {
             if (dateMatch || lowerInput.includes('today') || lowerInput.includes('tomorrow')) {
               setUserInfo(prev => ({...prev, visitDate: dateMatch ? dateMatch[0] : userInput}));
               setBookingStep('museum');
-              responseText = "Perfect! Which museum would you like to visit?";
+              responseText = translations[language].museumRequest;
             } else {
-              responseText = "Please specify a date for your visit (e.g., DD/MM/YYYY or 'tomorrow')";
+              responseText = translations[language].dateError;
             }
             break;
 
@@ -162,30 +199,30 @@ const ChatBot = () => {
             setUserInfo(prev => ({...prev, preferredMuseum: userInput}));
             setBookingStep('confirmation');
             const price = calculatePrice(userInfo.ticketQuantity);
-            responseText = `Thank you! Here's your booking summary:\n
-            - Museum: ${userInput}
-            - Date: ${userInfo.visitDate}
-            - Tickets: ${formatTickets(userInfo.ticketQuantity)}
-            - Total price: ₹${price}
+            responseText = `${translations[language].bookingSummary}\n
+            - ${language === 'en' ? 'Museum' : (language === 'hi' ? 'संग्रहालय' : 'அருங்காட்சியகம்')}: ${userInput}
+            - ${language === 'en' ? 'Date' : (language === 'hi' ? 'तारीख' : 'தேதி')}: ${userInfo.visitDate}
+            - ${language === 'en' ? 'Tickets' : (language === 'hi' ? 'टिकट' : 'டிக்கெட்கள்')}: ${formatTickets(userInfo.ticketQuantity)}
+            - ${language === 'en' ? 'Total price' : (language === 'hi' ? 'कुल कीमत' : 'மொத்த விலை')}: ₹${price}
             
-            Would you like to confirm this booking?`;
+            ${translations[language].confirmPrompt}`;
             break;
 
           case 'confirmation':
             if (lowerInput.includes('yes') || lowerInput.includes('confirm') || lowerInput.includes('ok')) {
               setBookingStep(null);
               setConversationContext(null);
-              responseText = `Booking confirmed! You'll receive a confirmation email${userInfo.email ? ' at ' + userInfo.email : ' shortly'}. Your booking reference is: MUS-${Math.floor(100000 + Math.random() * 900000)}.\n\n${getPersonalizedGreeting()}`;
+              responseText = `${translations[language].bookingConfirmed}${userInfo.email ? ' at ' + userInfo.email : ' shortly'}. ${language === 'en' ? 'Your booking reference is' : (language === 'hi' ? 'आपका बुकिंग संदर्भ है' : 'உங்கள் முன்பதிவு குறிப்பு')}: MUS-${Math.floor(100000 + Math.random() * 900000)}.\n\n${getPersonalizedGreeting()}`;
             } else {
               setBookingStep(null);
               setConversationContext(null);
-              responseText = "Booking cancelled. Feel free to start a new booking whenever you're ready.";
+              responseText = translations[language].bookingCancelled;
             }
             break;
 
           default:
             setBookingStep('quantity');
-            responseText = "How many tickets would you like to book? (adults, children, seniors)";
+            responseText = translations[language].quantityRequest;
         }
       } else {
         responseText = await callOllamaAPI(userInput);
@@ -226,7 +263,15 @@ const ChatBot = () => {
   };
 
   const getConversationContext = () => conversationContext;
-  const getPersonalizedGreeting = () => userInfo.name ? `How else can I help you today, ${userInfo.name}?` : "How else can I help you today?";
+  const getPersonalizedGreeting = () => {
+    if (language === 'en') {
+      return userInfo.name ? `How else can I help you today, ${userInfo.name}?` : "How else can I help you today?";
+    } else if (language === 'hi') {
+      return userInfo.name ? `आज मैं आपकी और कैसे मदद कर सकता हूं, ${userInfo.name}?` : "आज मैं आपकी और कैसे मदद कर सकता हूं?";
+    } else { // Tamil
+      return userInfo.name ? `இன்று நான் உங்களுக்கு வேறு எப்படி உதவ முடியும், ${userInfo.name}?` : "இன்று நான் உங்களுக்கு வேறு எப்படி உதவ முடியும்?";
+    }
+  };
   const calculatePrice = (quantity) => !quantity ? 0 : (quantity.adults || 0) * 50 + (quantity.children || 0) * 0 + (quantity.seniors || 0) * 20;
 
   const formatTickets = (quantity) => {
@@ -301,6 +346,7 @@ const ChatBot = () => {
               >
                 <MenuItem value="en">English</MenuItem>
                 <MenuItem value="hi">हिंदी</MenuItem>
+                <MenuItem value="ta">தமிழ்</MenuItem>
               </Select>
               <IconButton size="small" onClick={() => setIsOpen(false)} sx={{ color: 'white' }}>
                 <CloseIcon />
