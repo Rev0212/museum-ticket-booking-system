@@ -13,10 +13,10 @@ export const AuthProvider = ({ children }) => {
 
   // Inside your AuthContext provider:
 
+  // Make sure loadUser function matches backend structure
   const loadUser = useCallback(async () => {
     const token = localStorage.getItem('token');
     
-    // If no token, clear auth state
     if (!token) {
       setUser(null);
       setIsAuthenticated(false);
@@ -32,14 +32,10 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (err) {
-      console.error('Token verification failed:', err);
-      // Clear invalid auth data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      delete axios.defaults.headers.common['x-auth-token'];
       setUser(null);
       setIsAuthenticated(false);
-      setError('Authentication session expired. Please log in again.');
     } finally {
       setLoading(false);
     }

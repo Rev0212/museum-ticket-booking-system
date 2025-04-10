@@ -62,7 +62,12 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Method to compare password for login
+// Update the method name to match what your application is expecting
+userSchema.methods.comparePassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Keep the original method for backward compatibility
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

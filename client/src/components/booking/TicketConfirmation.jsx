@@ -14,7 +14,16 @@ import {
   CardContent,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Snackbar,
+  IconButton,
+  TextField,
+  Tooltip
 } from '@mui/material';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -24,13 +33,37 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-// No import needed for the placeholder
+import ShareIcon from '@mui/icons-material/Share';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CancelIcon from '@mui/icons-material/Cancel';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   getBookingById, 
   sendTicketEmailById, 
   sendTicketWhatsAppById,
-  downloadTicketPDF 
+  downloadTicketPDF,
+  cancelBooking
 } from '../../utils/api';
+
+// Add this helper function
+const formatVisitDate = (dateString) => {
+  try {
+    if (!dateString) return 'Date not available';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (err) {
+    console.error('Error formatting visit date:', err);
+    return 'Date format error';
+  }
+};
 
 const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   const { id } = useParams();
@@ -38,21 +71,58 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   const [booking, setBooking] = useState(directData ? bookingData : null);
   const [loading, setLoading] = useState(!directData);
   const [error, setError] = useState('');
+  
+  // Action states
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  
+  // Success states
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [whatsAppSuccess, setWhatsAppSuccess] = useState(false);
   const [pdfSuccess, setPdfSuccess] = useState(false);
+  
+  // Dialog states
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  
+  // Custom email
+  const [customEmail, setCustomEmail] = useState('');
+  const [customEmailError, setCustomEmailError] = useState('');
+
+  // Generated booking reference
+  const [bookingReference, setBookingReference] = useState('');
   
   useEffect(() => {
     // Only fetch if we're viewing by ID (not in booking flow)
     if (!directData && id) {
       const fetchBooking = async () => {
         try {
+          setLoading(true);
+          setError('');
           const data = await getBookingById(id);
+          
+          if (!data) {
+            setError('Booking not found');
+            return;
+          }
+          
           setBooking(data);
+          
+          // Generate booking reference if not provided
+          if (!data.bookingReference) {
+            generateBookingReference(data);
+          }
         } catch (err) {
+          console.error('Error fetching booking:', err);
           setError('Failed to load booking details');
         } finally {
           setLoading(false);
@@ -60,29 +130,128 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
       };
       
       fetchBooking();
+    } else if (directData && bookingData) {
+      // Generate booking reference for direct data
+      generateBookingReference(bookingData);
     }
-  }, [id, directData]);
+  }, [id, directData, bookingData]);
   
-  const handleSendEmail = async () => {
+  const generateBookingReference = (bookingData) => {
+    // Extract museum code (first 3 letters)
+    const museumCode = bookingData.museum?.name?.slice(0, 3).toUpperCase() || 'MUS';
+    
+    // Extract date code (DDMM)
+    const visitDate = bookingData.visitDate ? new Date(bookingData.visitDate) : new Date();
+    const dateCode = `${visitDate.getDate().toString().padStart(2, '0')}${(visitDate.getMonth() + 1).toString().padStart(2, '0')}`;
+    
+    // Generate random number (4 digits)
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    
+    // Combine to create reference
+    const reference = `${museumCode}-${dateCode}-${randomCode}`;
+    setBookingReference(reference);
+  };
+  
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+  
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
+  };
+  
+  const handleSendEmail = async (email = null) => {
     try {
       setSendingEmail(true);
-      await sendTicketEmailById(booking._id);
+      setError('');
+      
+      const targetEmail = email || booking?.contactInfo?.email;
+      
+      if (!targetEmail) {
+        throw new Error('No email address provided');
+      }
+      
+      if (directData) {
+        // Mock email sending for demo
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        showSnackbar(`Ticket sent to ${targetEmail}`);
+      } else {
+        await sendTicketEmailById(booking._id, targetEmail);
+        showSnackbar(`Ticket sent to ${targetEmail}`);
+      }
+      
       setEmailSuccess(true);
+      setShareDialogOpen(false);
     } catch (err) {
-      setError('Failed to send ticket via email');
+      setError('Failed to send ticket via email: ' + (err.message || 'Unknown error'));
+      showSnackbar('Failed to send email', 'error');
       console.error('Error sending ticket via email:', err);
     } finally {
       setSendingEmail(false);
     }
   };
   
+  const validateCustomEmail = () => {
+    if (!customEmail) {
+      setCustomEmailError('Email is required');
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customEmail)) {
+      setCustomEmailError('Invalid email format');
+      return false;
+    }
+    
+    setCustomEmailError('');
+    return true;
+  };
+  
+  const handleSendCustomEmail = () => {
+    if (validateCustomEmail()) {
+      handleSendEmail(customEmail);
+    }
+  };
+  
   const handleSendWhatsApp = async () => {
     try {
       setSendingWhatsApp(true);
-      await sendTicketWhatsAppById(booking._id);
+      setError('');
+      
+      const phoneNumber = booking?.contactInfo?.phone;
+      
+      if (!phoneNumber) {
+        throw new Error('No phone number provided');
+      }
+      
+      if (directData) {
+        // Mock WhatsApp sending for demo
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Create WhatsApp share link
+        const text = `Your museum ticket confirmation: ${bookingReference}\n` +
+                    `Museum: ${booking.museum.name}\n` +
+                    `Date: ${new Date(booking.visitDate).toLocaleDateString()}\n` +
+                    `Tickets: ${booking.tickets.reduce((acc, ticket) => acc + ticket.quantity, 0)}`;
+        
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(whatsappUrl, '_blank');
+      } else {
+        await sendTicketWhatsAppById(booking._id);
+      }
+      
       setWhatsAppSuccess(true);
+      showSnackbar('Ticket shared via WhatsApp');
     } catch (err) {
-      setError('Failed to send ticket via WhatsApp');
+      setError('Failed to send ticket via WhatsApp: ' + (err.message || 'Unknown error'));
+      showSnackbar('Failed to share via WhatsApp', 'error');
       console.error('Error sending ticket via WhatsApp:', err);
     } finally {
       setSendingWhatsApp(false);
@@ -92,13 +261,49 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   const handleDownloadPDF = async () => {
     try {
       setDownloadingPDF(true);
-      await downloadTicketPDF(booking._id);
+      setError('');
+      
+      if (directData) {
+        // Mock PDF download for demo
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        showSnackbar('Ticket PDF downloaded successfully');
+      } else {
+        await downloadTicketPDF(booking._id);
+        showSnackbar('Ticket PDF downloaded successfully');
+      }
+      
       setPdfSuccess(true);
     } catch (err) {
-      setError('Failed to download ticket PDF');
+      setError('Failed to download ticket PDF: ' + (err.message || 'Unknown error'));
+      showSnackbar('Failed to download PDF', 'error');
       console.error('Error downloading ticket PDF:', err);
     } finally {
       setDownloadingPDF(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    try {
+      setCancelling(true);
+      setError('');
+      
+      if (directData) {
+        // Mock cancellation for demo
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        showSnackbar('Booking cancelled successfully');
+        history.push('/dashboard');
+      } else {
+        await cancelBooking(booking._id);
+        showSnackbar('Booking cancelled successfully');
+        history.push('/dashboard');
+      }
+    } catch (err) {
+      setError('Failed to cancel booking: ' + (err.message || 'Unknown error'));
+      showSnackbar('Failed to cancel booking', 'error');
+      console.error('Error cancelling booking:', err);
+    } finally {
+      setCancelling(false);
+      setCancelDialogOpen(false);
     }
   };
 
@@ -106,15 +311,16 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
     history.push('/dashboard');
   };
   
-  const handleDownloadTicket = () => {
-    // In a real app, this would trigger a PDF download
-    alert('Ticket download functionality will be implemented in the next phase.');
+  const handleCopyReference = () => {
+    navigator.clipboard.writeText(bookingReference);
+    showSnackbar('Booking reference copied to clipboard');
   };
   
   if (loading) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
         <CircularProgress />
+        <Typography sx={{ mt: 2 }}>Loading ticket details...</Typography>
       </Box>
     );
   }
@@ -122,7 +328,7 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
   if (error) {
     return (
       <Box sx={{ py: 4 }}>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
         <Button 
           component={RouterLink}
           to="/dashboard"
@@ -150,16 +356,29 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
       </Box>
     );
   }
+
+  if (!booking || !booking.tickets) {
+    return (
+      <Box sx={{ py: 4 }}>
+        <Alert severity="warning">Booking information is incomplete or still loading</Alert>
+        <Button 
+          component={RouterLink}
+          to="/dashboard"
+          variant="contained"
+          sx={{ mt: 2 }}
+        >
+          Go to Dashboard
+        </Button>
+      </Box>
+    );
+  }
   
-  const visitDate = new Date(booking.visitDate).toLocaleDateString('en-US', {
+  const visitDate = booking?.visitDate ? new Date(booking.visitDate).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric'
-  });
-  
-  // Generate a random booking reference for demo purposes
-  const bookingReference = `MUSEUM-${Math.floor(100000 + Math.random() * 900000)}`;
+  }) : '';
   
   return (
     <Box sx={{ py: 4 }}>
@@ -200,11 +419,21 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
             <Typography variant="subtitle1" color="text.secondary">
               Your tickets have been booked successfully
             </Typography>
-            <Chip 
-              label={`Booking ID: ${booking.bookingReference}`}
-              color="primary"
-              sx={{ mt: 2 }}
-            />
+            <Grid container justifyContent="center" sx={{ mt: 2 }}>
+              <Grid item>
+                <Chip 
+                  label={`Booking Reference: ${bookingReference}`}
+                  color="primary"
+                  onDelete={handleCopyReference}
+                  deleteIcon={
+                    <Tooltip title="Copy reference">
+                      <ContentCopyIcon />
+                    </Tooltip>
+                  }
+                  sx={{ px: 1 }}
+                />
+              </Grid>
+            </Grid>
           </Grid>
           
           <Grid item xs={12}>
@@ -217,47 +446,71 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
             </Typography>
             
             <Typography variant="body1" fontWeight="bold" gutterBottom>
-              {booking.museum?.name || 'Museum'}
+              {booking?.museum?.name || 'Museum'}
             </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+              <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography variant="body1">
+                {booking?.museum?.location?.address}, 
+                {booking?.museum?.location?.city}
+              </Typography>
+            </Box>
             
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
               <CalendarTodayIcon sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="body1">
-                {visitDate}
+                {formatVisitDate(booking?.visitDate)}
               </Typography>
             </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 2 }}>
-              <LocationOnIcon sx={{ mr: 1, mt: 0.5, color: 'primary.main' }} />
-              <Typography variant="body1">
-                {booking.museum?.location.address || 'Address not available'}
-              </Typography>
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
-              Contact Information
-            </Typography>
             
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
               <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="body1">
-                {booking.contactInfo?.name || booking.user?.name || 'Name not available'}
+                {booking?.contactInfo?.name || 'Name not available'}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
               <EmailIcon sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="body1">
-                {booking.contactInfo?.email || booking.user?.email || 'Email not available'}
+                {booking?.contactInfo?.email || 'Email not available'}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
               <PhoneIcon sx={{ mr: 1, color: 'primary.main' }} />
               <Typography variant="body1">
-                {booking.contactInfo?.phone || booking.user?.phone || 'Phone not available'}
+                {booking.contactInfo?.phone || 'Phone not available'}
+              </Typography>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+            <Box 
+              sx={{ 
+                p: 2, 
+                border: '1px dashed', 
+                borderColor: 'divider',
+                borderRadius: 2,
+                textAlign: 'center'
+              }}
+            >
+              <Typography variant="subtitle1" gutterBottom>
+                E-Ticket QR Code
+              </Typography>
+              
+              <Box sx={{ mb: 2 }}>
+                <QRCodeSVG 
+                  value={`BOOKING:${bookingReference}`}
+                  size={150}
+                  level="H"
+                  includeMargin={true}
+                />
+              </Box>
+              
+              <Typography variant="caption" color="text.secondary">
+                Scan this QR code at the museum entrance
               </Typography>
             </Box>
           </Grid>
@@ -337,7 +590,7 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
                   variant="outlined"
                   fullWidth
                   startIcon={<EmailIcon />}
-                  onClick={handleSendEmail}
+                  onClick={() => setShareDialogOpen(true)}
                   disabled={sendingEmail || emailSuccess}
                 >
                   {sendingEmail ? <CircularProgress size={24} /> : 
@@ -384,104 +637,100 @@ const TicketConfirmation = ({ bookingData, onPrevious, directData }) => {
             >
               Go to Dashboard
             </Button>
+            
+            <Button
+              variant="outlined"
+              color="error"
+              size="large"
+              startIcon={<CancelIcon />}
+              onClick={() => setCancelDialogOpen(true)}
+              sx={{ ml: 2 }}
+              disabled={cancelling}
+            >
+              {cancelling ? <CircularProgress size={24} /> : "Cancel Booking"}
+            </Button>
           </Grid>
         </Grid>
       </Paper>
       
-      <Box sx={{ textAlign: 'center', mt: 4 }}>
-        <Typography variant="h5" component="h2" sx={{ color: 'success.main', mb: 2 }}>
-          Booking Confirmed!
-        </Typography>
-        
-        <Typography variant="body1" sx={{ mb: 4 }}>
-          Your booking reference is: <strong>{bookingReference}</strong>
-        </Typography>
-        
-        <Paper elevation={3} sx={{ p: 3, mb: 4, maxWidth: 500, mx: 'auto' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Box 
-              sx={{ 
-                width: 150, 
-                height: 150, 
-                border: '1px solid #ccc', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                bgcolor: '#f5f5f5'
-              }}
-            >
-              <Typography variant="body2" color="text.secondary" align="center">
-                QR Code<br />
-                {bookingReference}
-              </Typography>
-            </Box>
-          </Box>
-          
-          <Divider sx={{ mb: 2 }} />
-          
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Museum" 
-                secondary={booking.museum?.name} 
-              />
-            </ListItem>
-            
-            <ListItem>
-              <ListItemText 
-                primary="Visit Date" 
-                secondary={visitDate} 
-              />
-            </ListItem>
-            
-            <ListItem>
-              <ListItemText 
-                primary="Tickets" 
-                secondary={
-                  <span>
-                    {booking.tickets?.map((ticket, index) => (
-                      <div key={index}>
-                        {ticket.quantity} x {ticket.type.charAt(0).toUpperCase() + ticket.type.slice(1)}
-                      </div>
-                    ))}
-                  </span>
-                } 
-              />
-            </ListItem>
-            
-            <ListItem>
-              <ListItemText 
-                primary="Total Amount" 
-                secondary={`₹${booking.totalAmount}`} 
-              />
-            </ListItem>
-          </List>
-        </Paper>
-        
-        <Typography variant="body2" sx={{ mb: 3 }}>
-          A copy of this ticket has been sent to your email: {booking.contactInfo?.email}
-        </Typography>
-        
-        <Grid container spacing={2} justifyContent="center">
-          <Grid item>
-            <Button 
-              variant="contained" 
-              color="primary"
-              onClick={handleDownloadTicket}
-            >
-              Download Ticket
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button 
-              variant="outlined"
-              onClick={handleViewBookings}
-            >
-              View My Bookings
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
+      {/* Share Dialog */}
+      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)}>
+        <DialogTitle>Share Ticket</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Send your ticket to any email address:
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email Address"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={customEmail}
+            onChange={(e) => {
+              setCustomEmail(e.target.value);
+              setCustomEmailError('');
+            }}
+            error={!!customEmailError}
+            helperText={customEmailError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSendCustomEmail}
+            variant="contained"
+            disabled={sendingEmail}
+          >
+            {sendingEmail ? <CircularProgress size={24} /> : "Send"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Cancellation Confirmation Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={() => setCancelDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Cancellation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to cancel this booking? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setCancelDialogOpen(false)}
+            autoFocus
+          >
+            No, Keep My Booking
+          </Button>
+          <Button 
+            onClick={handleCancelBooking}
+            variant="contained"
+            color="error"
+            disabled={cancelling}
+          >
+            {cancelling ? <CircularProgress size={24} /> : "Yes, Cancel Booking"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

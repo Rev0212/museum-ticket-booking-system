@@ -7,8 +7,8 @@ const errorHandler = require('./middleware/errorHandler');
 // Import routes
 const authRoutes = require('./routes/auth');
 const museumRoutes = require('./routes/museums');
-const bookingRoutes = require('./routes/bookings');
-const eventRoutes = require('./routes/events');
+// const bookingRoutes = require('./routes/bookings');
+// const eventRoutes = require('./routes/events');
 const newsRoutes = require('./routes/news');
 
 const app = express();
@@ -24,8 +24,8 @@ app.use(morgan('dev'));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/museums', museumRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/events', eventRoutes);
+// app.use('/api/bookings', bookingRoutes);
+// app.use('/api/events', eventRoutes);
 app.use('/api/news', newsRoutes);
 
 // Error Handler
