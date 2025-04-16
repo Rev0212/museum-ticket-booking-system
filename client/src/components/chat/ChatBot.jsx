@@ -106,7 +106,8 @@ const ChatBot = () => {
 
   const callOllamaAPI = async (userMessage) => {
     try {
-      const endpoint = 'https://1hl9rpqb-11434.inc1.devtunnels.ms/api/generate';
+      console.log('Calling Ollama API with message:', userMessage);
+      const endpoint = '/api/generate';
       
       const context = messages.slice(-5).map(msg => {
         return `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`;

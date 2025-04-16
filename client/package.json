@@ -2,7 +2,7 @@
   "name": "museum-ticket-booking-system-client",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:5001",
+  "proxy": "https://1hl9rpqb-11434.inc1.devtunnels.ms",
   "scripts": {
     "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
     "build": "NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
