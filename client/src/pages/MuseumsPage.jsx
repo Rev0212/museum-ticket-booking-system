@@ -95,7 +95,7 @@ const museumsByState = {
       city: "Ahmedabad",
       description: "One of the finest textile museums in the world with an outstanding collection of Indian fabrics.",
       image: "https://calicomuseum.org/wp-content/uploads/2013/10/DSC_8569_web.jpg",
-      wikipediaUrl: "https://en.wikipedia.org/wiki/Calico_Museum_of_Textiles"
+      wikipediaUrl: "https://www.calicomuseum.org/"
     },
     {
       id: 302,
@@ -103,7 +103,7 @@ const museumsByState = {
       city: "Ahmedabad",
       description: "Houses a collection of paintings, sculptures, and other exhibits with emphasis on Jain art forms.",
       image: "https://ahmedabadtourism.in/images/places-to-visit/headers/lalbhai-dalpatbhai-museum-ahmedabad-tourism-entry-fee-timings-holidays-reviews-header.jpg",
-      wikipediaUrl: "https://en.wikipedia.org/wiki/Lalbhai_Dalpatbhai_Museum"
+      wikipediaUrl: "https://www.ldmuseum.co.in/"
     }
   ],
   "Karnataka": [
@@ -113,7 +113,7 @@ const museumsByState = {
       city: "Bangalore",
       description: "One of the oldest museums in India, featuring archaeological artifacts, paintings, and geological exhibits.",
       image: "https://static.toiimg.com/thumb/62277521/Government-Museum.jpg?width=1200&height=900",
-      wikipediaUrl: "https://en.wikipedia.org/wiki/Government_Museum,_Bangalore"
+      wikipediaUrl: "https://archaeology.karnataka.gov.in/page/Government+Museums/Government+Museums+Bengaluru/en"
     }
   ],
   "Maharashtra": [
@@ -123,7 +123,7 @@ const museumsByState = {
       city: "Mumbai",
       description: "Formerly known as the Prince of Wales Museum, featuring Indo-Saracenic architectural style and extensive art collections.",
       image: "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?q=80&w=1200&auto=format&fit=crop",
-      wikipediaUrl: "https://en.wikipedia.org/wiki/Chhatrapati_Shivaji_Maharaj_Vastu_Sangrahalaya"
+      wikipediaUrl: "https://csmvs.in/"
     },
     {
       id: 502,
@@ -131,7 +131,7 @@ const museumsByState = {
       city: "Pune",
       description: "Contains the collection of Dr. Dinkar G. Kelkar, dedicated to everyday arts of the Maratha period.",
       image: "https://img-cdn.thepublive.com/filters:format(webp)/local-samosal/media/media_files/pgZODvPlwDSNcLFDdX9c.png",
-      wikipediaUrl: "https://en.wikipedia.org/wiki/Kelkar_Museum"
+      wikipediaUrl: "https://rajakelkarmuseum.org/"
     }
   ],
   "Rajasthan": [
@@ -141,7 +141,7 @@ const museumsByState = {
       city: "Jaipur",
       description: "The oldest museum in Rajasthan, featuring a rich collection of artifacts including paintings, jewelry, carpets, and more.",
       image: "https://s7ap1.scene7.com/is/image/incredibleindia/albert-hall-museum-jaipur-rajasthan-3-attr-hero?qlt=82&ts=1726660086518",
-      wikipediaUrl: "https://en.wikipedia.org/wiki/Albert_Hall_Museum"
+      wikipediaUrl: "https://shop.museumsofindia.org/node/412"
     },
     {
       id: 602,
@@ -197,37 +197,48 @@ const MuseumsPage = () => {
     const fetchMuseums = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch available states for filtering
-        const statesData = await getAllStates();
+        let statesData = await getAllStates();
+        if (!statesData || statesData.length === 0) {
+          statesData = Object.keys(museumsByState); // Fallback to sample data
+        }
         setStates(['all', ...statesData]);
-        
+
         // Get museums based on selected state
         let museumsData;
         if (selectedState === 'all') {
           museumsData = await getAllMuseums();
+          if (!museumsData || museumsData.length === 0) {
+            museumsData = Object.values(museumsByState).flat(); // Fallback to sample data
+          }
         } else {
           museumsData = await getMuseumsByState(selectedState);
+          if (!museumsData || museumsData.length === 0) {
+            museumsData = museumsByState[selectedState] || []; // Fallback to sample data
+          }
         }
-        
+
         // Group museums by state for display
         const groupedMuseums = {};
-        museumsData.forEach(museum => {
-          const state = museum.location.state || 'Other';
+        museumsData.forEach((museum) => {
+          const state = museum.location?.state || 'Other';
           if (!groupedMuseums[state]) {
             groupedMuseums[state] = [];
           }
           groupedMuseums[state].push(museum);
         });
-        
+
         setMuseumsByState(groupedMuseums);
       } catch (error) {
-        setError('Failed to load museums');
+        console.error('Failed to fetch museums:', error);
+        setError('Failed to load museums. Using sample data.');
+        setMuseumsByState(museumsByState); // Fallback to sample data
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchMuseums();
   }, [selectedState]);
 

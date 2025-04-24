@@ -107,7 +107,7 @@ const ChatBot = () => {
   const callOllamaAPI = async (userMessage) => {
     try {
       console.log('Calling Ollama API with message:', userMessage);
-      const endpoint = '/api/generate';
+      const endpoint = 'https://1hl9rpqb-11434.inc1.devtunnels.ms/api/generate';
       
       const context = messages.slice(-5).map(msg => {
         return `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`;
@@ -115,20 +115,26 @@ const ChatBot = () => {
 
       const responseLang = language === 'en' ? 'English' : (language === 'hi' ? 'Hindi' : 'Tamil');
       
-      const systemPrompt = `You are a helpful museum virtual assistant for the Museum Ticket Booking System. 
-      You provide information about museum timings, ticket prices, exhibitions, and help with bookings.
-      IMPORTANT: Respond in ${responseLang} regardless of what language the user types in.
-      Today's date is ${new Date().toLocaleDateString()}.
-      Keep your responses concise, friendly and helpful.
+      const systemPrompt = `You are a knowledgeable museum virtual assistant for the Museum Ticket Booking System.
+      You have extensive knowledge about museums in India and worldwide.
       
-      Information you should know:
-      - Adult tickets cost ₹50
-      - Children enter for free
-      - Senior tickets cost ₹20
-      - Museums are typically open from 9:00 AM to 5:00 PM Tuesday through Sunday, closed on Mondays
-      - Current exhibitions include: Ancient Civilizations Gallery, Modern Art Exhibition, Natural History Wing, and Interactive Science Displays`;
+      IMPORTANT: 
+      - Respond in ${responseLang} regardless of what language the user types in
+      - Use your knowledge base to provide accurate information about real museums
+      - If asked about specific museums in Chennai, Delhi, Mumbai or any city, provide real information
+      - Do not say "I don't have specific information" - use your training data to answer
+      - Provide factual information about museum locations, collections, and exhibits
+      - Today's date is ${new Date().toLocaleDateString()}
+      
+      If asked about ticket booking, you can mention:
+      - Adult tickets typically cost ₹50
+      - Children usually enter for free
+      - Senior tickets often cost ₹20
+      - Most museums are open Tuesday-Sunday, 9:00 AM to 5:00 PM`;
       
       const prompt = `${systemPrompt}\n\n${context}\nUser: ${userMessage}\nAssistant:`;
+
+      console.log('Sending prompt to Ollama');
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -147,6 +153,8 @@ const ChatBot = () => {
       }
 
       const data = await response.json();
+      console.log('Received response from Ollama');
+      
       return data.response || "Sorry, I couldn't process your request.";
     } catch (error) {
       console.error('Error calling Ollama API:', error);
@@ -161,6 +169,7 @@ const ChatBot = () => {
       let responseText;
       const lowerInput = userInput.toLowerCase();
       
+      // Handle only booking flow with built-in responses
       if (conversationContext === 'booking' && bookingStep) {
         switch(bookingStep) {
           case 'quantity':
@@ -226,14 +235,17 @@ const ChatBot = () => {
             responseText = translations[language].quantityRequest;
         }
       } else {
+        // All other queries go to Ollama API
         responseText = await callOllamaAPI(userInput);
         
+        // Only set booking context if explicitly mentioned
         if (lowerInput.includes('book') || lowerInput.includes('ticket') || lowerInput.includes('reserve')) {
           setConversationContext('booking');
           setBookingStep('quantity');
           responseText = translations[language].bookingPrompt;
         }
 
+        // Keep email and name capture logic
         const emailMatch = userInput.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
         if (emailMatch) {
           setUserInfo(prev => ({...prev, email: emailMatch[0]}));
@@ -251,7 +263,9 @@ const ChatBot = () => {
       setIsTyping(false);
       const response = { text: responseText, sender: 'bot' };
       setMessages(prev => [...prev, response]);
-      generateSuggestions(userInput, responseText);
+      
+      // Modify generateSuggestions to be more dynamic based on Ollama's response
+      generateDynamicSuggestions(responseText);
     } catch (err) {
       console.error('Error in bot response:', err);
       setIsTyping(false);
@@ -284,19 +298,23 @@ const ChatBot = () => {
     return parts.join(', ');
   };
 
-  const generateSuggestions = (userInput, botResponse) => {
-    const lowerInput = userInput.toLowerCase();
-    if (botResponse.includes("book tickets") || botResponse.includes("specify")) {
-      setSuggestions(["2 adults, 1 child", "Museum timings?", "What are the prices?"]);
-    } else if (botResponse.includes("exhibition") || botResponse.includes("display")) {
-      setSuggestions(["Tell me about Ancient Civilizations", "Interactive Science Displays", "Ticket prices"]);
-    } else if (botResponse.includes("date")) {
-      setSuggestions(["Tomorrow", "Next Saturday", "10/05/2025"]);
-    } else if (botResponse.includes("museum")) {
-      setSuggestions(["National Museum", "Art Gallery", "Science Museum"]);
+  const generateDynamicSuggestions = (botResponse) => {
+    const lowerResponse = botResponse.toLowerCase();
+    let suggestionsArray = [];
+
+    // Only add booking-related suggestions when explicitly mentioned
+    if (lowerResponse.includes('book') || lowerResponse.includes('ticket')) {
+      suggestionsArray = ["2 adults, 1 child", "What are the ticket prices?"];
+    } else if (lowerResponse.includes('date') && conversationContext === 'booking') {
+      suggestionsArray = ["Tomorrow", "Next Saturday", "10/05/2025"];
+    } else if (lowerResponse.includes('museum') && conversationContext === 'booking') {
+      suggestionsArray = ["National Museum", "Art Gallery", "Science Museum"];
     } else {
-      setSuggestions(["Book tickets", "Opening hours", "Current exhibitions"]);
+      // Default suggestions that encourage open-ended questions
+      suggestionsArray = ["Tell me about exhibitions", "Museum hours", "Special events"];
     }
+    
+    setSuggestions(suggestionsArray);
   };
 
   return (
